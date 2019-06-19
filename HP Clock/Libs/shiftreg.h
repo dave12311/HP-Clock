@@ -40,6 +40,10 @@ uint8_t digits[5];
 //Track which digit to load into shift register
 uint8_t digitCounter;
 
+uint8_t enc_rdy;
+uint8_t enc_a, enc_b;
+uint8_t enc_a_old, enc_b_old;
+
 void sh_init();
 void sh_pulseSH();
 void sh_pulseST();

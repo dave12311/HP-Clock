@@ -11,11 +11,10 @@
 
 #include "Libs/bitop.h"
 #include "Libs/shiftreg.h"
-#include "Libs/encoder.h"
 
 int main(void){
 	for(uint8_t i=0;i<5;i++){
-		digits[i] = i;
+		digits[i] = 0;
 	}
 	
 	sh_init();

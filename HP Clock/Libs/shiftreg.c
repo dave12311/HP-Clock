@@ -25,19 +25,54 @@ const uint8_t Digit_data[DIGIT_NUM] = {
 uint8_t digitCounter = 0;
 
 ISR(TIMER0_OVF_vect){
+	//Update screen
 	sh_shiftDigit(digits[digitCounter]);
 	sh_switchCathode(digitCounter++);
 	if(digitCounter==5){digitCounter=0;}
+	
+	//Poll encoder
+	enc_a = (PINB&0x2)>>1;
+	enc_b = (PINB&0x4)>>2;
+		
+	if(!enc_a && !enc_b && enc_b_old){
+		digits[4]++;
+		enc_rdy = 0;
+		}else if(!enc_a && enc_b && !enc_b_old){
+		digits[4]--;
+		enc_rdy = 0;
+	}
+	
+	enc_a_old = enc_a;
+	enc_b_old = enc_b;
+	
+	//DEBUG	
+	if(digits[4] == 10){
+		digits[3]++;
+		digits[4] = 0;
+		}else if(digits[4] == 255){
+		digits[3]--;
+		digits[4] = 9;
+	}
 }
 
 void sh_init(){
+	enc_rdy = 1;
+	enc_a = 1;
+	enc_b = 1;
+	enc_a_old = 1;
+	enc_b_old = 1;
 	//Set shift register pins as outputs
 	setBit(SH_DDR,SH_DATA);
 	setBit(SH_DDR,SH_SHIFT_CLOCK);
 	setBit(SH_DDR,SH_STORAGE_CLOCK);
 	setBit(SH_DDR,SH_OE);
 	
-	//Setup timer 0
+	//Setup encoder pins
+	setBit(PORTB,0);
+	setBit(PORTB,1);
+	setBit(PORTB,2);
+	
+	//Setup Timer 0
 	TCCR0B |= 0x3;
 	TIMSK0 |= 0x1;	//Enable overflow interrupt
 	

@@ -1,5 +1,5 @@
 /*
- * shiftreg.c
+ * control.c
  *
  * Created: 6/17/2019 7:58:12 PM
  *  Author: horva
@@ -8,7 +8,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#include "shiftreg.h"
+#include "control.h"
 #include "bitop.h"
 
 //Display data
@@ -17,8 +17,8 @@ const uint8_t Digit_data[DIGIT_NUM] = {
 	0b11111100,0b01100000,0b11011010,0b11110010,0b01100110,
 	//   5          6          7          8          9
 	0b10110110,0b10111110,0b11100000,0b11111110,0b11110110,
-	//              E
-	0b00000000,0b10011110
+	//              E          -
+	0b00000000,0b10011110,0b00000010
 };
 
 //Track which digit to load into shift register
@@ -35,39 +35,32 @@ ISR(TIMER0_OVF_vect){
 	enc_b = (PINB&0x4)>>2;
 		
 	if(!enc_a && !enc_b && enc_b_old){
-		digits[4]++;
+		//RIGHT
 		enc_rdy = 0;
 		}else if(!enc_a && enc_b && !enc_b_old){
-		digits[4]--;
+		//LEFT
 		enc_rdy = 0;
 	}
 	
 	enc_a_old = enc_a;
 	enc_b_old = enc_b;
-	
-	//DEBUG	
-	if(digits[4] == 10){
-		digits[3]++;
-		digits[4] = 0;
-		}else if(digits[4] == 255){
-		digits[3]--;
-		digits[4] = 9;
-	}
 }
 
-void sh_init(){
+void control_init(){
+	//Set default values
 	enc_rdy = 1;
 	enc_a = 1;
 	enc_b = 1;
 	enc_a_old = 1;
 	enc_b_old = 1;
+	
 	//Set shift register pins as outputs
 	setBit(SH_DDR,SH_DATA);
 	setBit(SH_DDR,SH_SHIFT_CLOCK);
 	setBit(SH_DDR,SH_STORAGE_CLOCK);
 	setBit(SH_DDR,SH_OE);
 	
-	//Setup encoder pins
+	//Enable internal pull-up for encoder pins
 	setBit(PORTB,0);
 	setBit(PORTB,1);
 	setBit(PORTB,2);

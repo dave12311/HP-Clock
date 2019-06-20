@@ -10,16 +10,23 @@
 #include <stdint.h>
 
 #include "Libs/bitop.h"
-#include "Libs/shiftreg.h"
+#include "Libs/control.h"
+#include "Libs/RTC.h"
 
 int main(void){
-	for(uint8_t i=0;i<5;i++){
-		digits[i] = 0;
-	}
-	
-	sh_init();
+	control_init();
+	RTC_init();
+
+	uint8_t err = 0;
 	
     while (1){
+		err = RTC_getData(2);
+		if(err == 0){
+			RTC_writeTime();
+		}else{
+			RTC_error(err);
+		}
+		_delay_ms(500);
 	}
 }
 

@@ -163,10 +163,16 @@
     <Compile Include="Libs\bitop.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="Libs\shiftreg.c">
+    <Compile Include="Libs\RTC.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="Libs\shiftreg.h">
+    <Compile Include="Libs\RTC.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Libs\control.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Libs\control.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">

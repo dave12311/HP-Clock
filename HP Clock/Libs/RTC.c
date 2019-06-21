@@ -91,14 +91,14 @@ uint8_t RTC_getData(uint8_t num){
 	return 0;
 }
 
-uint8_t RTC_setSeconds(uint8_t s){
+uint8_t RTC_setData(){
 	//Send start condition
 	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
 	//Wait for start condition to be sent
 	while (!(TWCR & (1<<TWINT)));
 	//Check if start was sent
 	if ((TWSR & 0xF8) != TW_START){
-		RTC_error(1);
+		return 1;
 	}
 	
 	//Send slave address in write mode
@@ -108,27 +108,29 @@ uint8_t RTC_setSeconds(uint8_t s){
 	while (!(TWCR &	(1<<TWINT)));
 	//Check for ACK
 	if ((TWSR & 0xF8) != TW_MT_SLA_ACK){
-		RTC_error(2);
+		return 2;
 	}
 	
 	//Load data address
-	TWDR = 0x00;	//Seconds
+	TWDR = 0x00;
 	TWCR = (1<<TWINT) | (1<<TWEN);
 	//Wait for reply
 	while (!(TWCR &	(1<<TWINT)));
 	//Check for ACK
 	if ((TWSR & 0xF8) !=TW_MT_DATA_ACK){
-		RTC_error(3);
+		return 3;
 	}
 	
-	//Load data
-	TWDR = s;
-	TWCR = (1<<TWINT) | (1<<TWEN);
-	//Wait for reply
-	while (!(TWCR &	(1<<TWINT)));
-	//Check for ACK
-	if ((TWSR & 0xF8) !=TW_MT_DATA_ACK){
-		RTC_error(4);
+	for(uint8_t i=0;i<7;i++){
+		//Load data
+		TWDR = RTC_Data[i];
+		TWCR = (1<<TWINT) | (1<<TWEN);
+		//Wait for reply
+		while (!(TWCR &	(1<<TWINT)));
+		//Check for ACK
+		if ((TWSR & 0xF8) !=TW_MT_DATA_ACK){
+			return 4;
+		}
 	}
 	
 	//Send stop

@@ -2,8 +2,8 @@
  * RTC.h
  *
  * Created: 6/19/2019 11:08:14 PM
- *  Author: horva
- */ 
+ *  Author: Dave
+ */
 #include <stdint.h>
 
 #ifndef RTC_H_
@@ -25,14 +25,15 @@ volatile uint8_t RTC_Data[7];
 
 //Setup I/O
 void RTC_init(void);
+
 //Get [num]*2 bytes of time data starting from seconds
 uint8_t RTC_getData(uint8_t num);
+
 //Write the contents of RTC_Data to the RTC
 uint8_t RTC_setData(void);
+
 //Display an error message
 void RTC_error(uint8_t n);
-//Display TIME
-void RTC_writeTime(void);
 
 
 #endif /* RTC_H_ */

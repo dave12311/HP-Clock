@@ -2,8 +2,8 @@
  * control.h
  *
  * Created: 6/17/2019 7:55:43 PM
- *  Author: horva
- */ 
+ *  Author: Dave
+ */
 
 #include <stdint.h>
 
@@ -36,9 +36,10 @@
 #define SH_ON() (clearBit(SH_PORT,SH_OE))
 #define SH_OFF() (setBit(SH_PORT,SH_OE))
 
-#define BLINK_MODE_ALL		0
-#define BLINK_MODE_RIGHT	1
-#define BLINK_MODE_LEFT		2
+#define BLINK_MODE_ALL      0
+#define BLINK_MODE_RIGHT    1
+#define BLINK_MODE_LEFT     2
+#define BLINK_MODE_MIDDLE   3
 
 //Display data
 const uint8_t Digit_data[DIGIT_NUM];
@@ -61,35 +62,61 @@ volatile uint8_t encButtonPressed;
 
 //Encoder event pointers
 void (*volatile encoderEventRight)(void);
+
 void (*volatile encoderEventLeft)(void);
 
 //Encoder events
 void EventYearRight(void);
+
 void EventYearLeft(void);
 
+
 void EventMonthRight(void);
+
 void EventMonthLeft(void);
 
+
 void EventDateRight(void);
+
 void EventDateLeft(void);
+
+
+void EventHourRight(void);
+
+void EventHourLeft(void);
+
+
+void EventMinRight(void);
+
+void EventMinLeft(void);
 
 //Start timers, set I/O
 void control_init(void);
+
 //Pulse the shift register clock
 void sh_pulseSH(void);
+
 //Pulse the storage register clock
 void sh_pulseST(void);
+
 //Shift out one digit
 void sh_shiftDigit(uint8_t d);
+
 //Cycle to the next cathode
 void switchCathode(uint8_t c);
+
 //Start clock setup
 void startSetup(void);
+
+
+void displayTime(void);
 
 void displayDate(void);
 
 void blinkOn(void);
+
 void blinkOff(void);
+
 void resetBlink(void);
 
 #endif /* CONTROL_H_ */

@@ -19,6 +19,9 @@ int main(void){
 
 	uint8_t err = 0;
 	
+	startSetup();
+	RTC_setData();
+	
     while (1){
 		err = RTC_getData(2);
 		if(err == 0){

@@ -36,24 +36,60 @@
 #define SH_ON() (clearBit(SH_PORT,SH_OE))
 #define SH_OFF() (setBit(SH_PORT,SH_OE))
 
+#define BLINK_MODE_ALL		0
+#define BLINK_MODE_RIGHT	1
+#define BLINK_MODE_LEFT		2
+
 //Display data
 const uint8_t Digit_data[DIGIT_NUM];
 
 //Buffer for all 5 displayed digits
-uint8_t digits[5];
+volatile uint8_t digits[5];
 
 //Track which digit to load into shift register
-uint8_t digitCounter;
+volatile uint8_t digitCounter;
 
-uint8_t enc_rdy;
-uint8_t enc_a, enc_b;
-uint8_t enc_a_old, enc_b_old;
+//Stores blink state
+volatile uint8_t blink;
+volatile uint8_t blinkMode;
 
-void control_init();
-void sh_pulseSH();
-void sh_pulseST();
-void sh_switchCathode(uint8_t c);
+//Store encoder states
+volatile uint8_t enc_a, enc_b;
+volatile uint8_t enc_a_old, enc_b_old;
+volatile uint8_t enc_button, enc_button_old;
+volatile uint8_t encButtonPressed;
 
+//Encoder event pointers
+void (*volatile encoderEventRight)(void);
+void (*volatile encoderEventLeft)(void);
+
+//Encoder events
+void EventYearRight(void);
+void EventYearLeft(void);
+
+void EventMonthRight(void);
+void EventMonthLeft(void);
+
+void EventDateRight(void);
+void EventDateLeft(void);
+
+//Start timers, set I/O
+void control_init(void);
+//Pulse the shift register clock
+void sh_pulseSH(void);
+//Pulse the storage register clock
+void sh_pulseST(void);
+//Shift out one digit
 void sh_shiftDigit(uint8_t d);
+//Cycle to the next cathode
+void switchCathode(uint8_t c);
+//Start clock setup
+void startSetup(void);
+
+void displayDate(void);
+
+void blinkOn(void);
+void blinkOff(void);
+void resetBlink(void);
 
 #endif /* CONTROL_H_ */

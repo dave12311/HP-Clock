@@ -7,9 +7,11 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
 #include "control.h"
 #include "bitop.h"
+#include "RTC.h"
 
 //Display data
 const uint8_t Digit_data[DIGIT_NUM] = {
@@ -21,38 +23,84 @@ const uint8_t Digit_data[DIGIT_NUM] = {
 	0b00000000,0b10011110,0b00000010
 };
 
-//Track which digit to load into shift register
-uint8_t digitCounter = 0;
-
 ISR(TIMER0_OVF_vect){
 	//Update screen
-	sh_shiftDigit(digits[digitCounter]);
-	sh_switchCathode(digitCounter++);
+	if(blinkMode == BLINK_MODE_ALL){
+		if(blink == 1){
+			sh_shiftDigit(digits[digitCounter]);
+		}else{
+			sh_shiftDigit(D_EMPTY);
+		}
+	}else if(blinkMode == BLINK_MODE_RIGHT){
+		if(digitCounter != 3 && digitCounter != 4){
+			sh_shiftDigit(digits[digitCounter]);
+		}else if(blink == 1){
+			sh_shiftDigit(digits[digitCounter]);
+		}else{
+			sh_shiftDigit(D_EMPTY);
+		}
+	}else{
+		if(digitCounter != 0 && digitCounter != 1){
+			sh_shiftDigit(digits[digitCounter]);
+		}else if(blink == 1){
+			sh_shiftDigit(digits[digitCounter]);
+		}else{
+			sh_shiftDigit(D_EMPTY);
+		}
+	}
+	switchCathode(digitCounter++);
 	if(digitCounter==5){digitCounter=0;}
 	
 	//Poll encoder
+	enc_button = (PINB&0x1);
 	enc_a = (PINB&0x2)>>1;
 	enc_b = (PINB&0x4)>>2;
 		
 	if(!enc_a && !enc_b && enc_b_old){
-		//RIGHT
-		enc_rdy = 0;
-		}else if(!enc_a && enc_b && !enc_b_old){
-		//LEFT
-		enc_rdy = 0;
+		if(encoderEventRight != 0){
+			resetBlink();
+			(*encoderEventRight)();
+		}
+	}else if(!enc_a && enc_b && !enc_b_old){
+		if(encoderEventLeft != 0){
+			resetBlink();
+			(*encoderEventLeft)();
+		}
+	}
+	
+	//Check button state
+	if(!enc_button && enc_button_old){
+		encButtonPressed = 1;
 	}
 	
 	enc_a_old = enc_a;
 	enc_b_old = enc_b;
+	enc_button_old = enc_button;
+	
 }
 
-void control_init(){
+ISR(TIMER1_OVF_vect){
+	if(blink==0){
+		blink = 1;
+	}else{
+		blink = 0;
+	}
+}
+
+void control_init(void){
 	//Set default values
-	enc_rdy = 1;
+	blink = 0;
+	blinkMode = 0;
+	digitCounter = 0;
 	enc_a = 1;
 	enc_b = 1;
 	enc_a_old = 1;
 	enc_b_old = 1;
+	enc_button = 1;
+	enc_button_old = 1;
+	encButtonPressed = 0;
+	encoderEventRight = 0;
+	encoderEventLeft = 0;
 	
 	//Set shift register pins as outputs
 	setBit(SH_DDR,SH_DATA);
@@ -69,16 +117,19 @@ void control_init(){
 	TCCR0B |= 0x3;
 	TIMSK0 |= 0x1;	//Enable overflow interrupt
 	
+	//Setup Timer 1 [BLINK]
+	TCCR1B |= 0x3;
+	
 	//Enable global interrupts
 	sei();
 }
 
-void sh_pulseSH(){
+void sh_pulseSH(void){
 	setBit(SH_PORT,SH_SHIFT_CLOCK);
 	clearBit(SH_PORT,SH_SHIFT_CLOCK);
 }
 
-void sh_pulseST(){
+void sh_pulseST(void){
 	setBit(SH_PORT,SH_STORAGE_CLOCK);
 	clearBit(SH_PORT,SH_STORAGE_CLOCK);
 }
@@ -91,10 +142,164 @@ void sh_shiftDigit(uint8_t d){
 	sh_pulseST();
 }
 
-void sh_switchCathode(uint8_t c){
+void switchCathode(uint8_t c){
 	//Reset cathodes
 	CAT_DDR &= ~(0b11111000);
 	
 	//Set active cathode
 	CAT_DDR |= (1<<(c+3));
+}
+
+void blinkOn(void){
+	//Enable interrupt
+	TIMSK1 = 0x1;
+}
+
+void blinkOff(void){
+	//Disable interrupt
+	TIMSK1 = 0x0;
+	blink = 1;
+}
+
+void resetBlink(void){
+	blink = 1;
+	TCNT1H = 0;
+	TCNT1L = 0;	
+}
+
+void startSetup(void){
+	blinkMode = BLINK_MODE_ALL;
+	blinkOn();
+	//YEAR
+	RTC_Data[RTC_YEAR] = 0;
+	digits[0] = D_EMPTY;
+	digits[1] = 2;
+	digits[2] = 0;
+	digits[3] = 0;
+	digits[4] = 0;
+	encoderEventRight = &EventYearRight;
+	encoderEventLeft = &EventYearLeft;
+	while(!encButtonPressed);
+	encButtonPressed = 0;
+	
+	//DATE
+	blinkMode = BLINK_MODE_LEFT;
+	RTC_Data[RTC_MONTH] = 0;
+	digits[0] = 0;
+	digits[1] = 0;
+	digits[2] = D_DASH;
+	digits[3] = 0;
+	digits[4] = 0;
+	encoderEventRight = &EventMonthRight;
+	encoderEventLeft = &EventMonthLeft;
+	while(!encButtonPressed);
+	encButtonPressed = 0;
+	
+	blinkMode = BLINK_MODE_RIGHT;
+	RTC_Data[RTC_DATE] = 0;
+	encoderEventRight = &EventDateRight;
+	encoderEventLeft = &EventDateLeft;
+	while(!encButtonPressed);
+	encButtonPressed = 0;
+	
+	//TIME
+	
+}
+
+void EventYearRight(void){
+	if(RTC_Data[RTC_YEAR]==0x99){
+		RTC_Data[RTC_YEAR] = 0;
+		digits[3] = 0;
+		digits[4] = 0;
+	}else if((RTC_Data[RTC_YEAR]&0x0F)==9){
+		RTC_Data[RTC_YEAR] += 0x7;
+		digits[3]++;
+		digits[4] = 0;
+	}else{
+		RTC_Data[RTC_YEAR]++;
+		digits[4]++;
+	}
+}
+
+void EventYearLeft(void){
+	if(RTC_Data[RTC_YEAR]==0x00){
+		RTC_Data[RTC_YEAR] = 0x99;
+		digits[3] = 9;
+		digits[4] = 9;
+	}else if((RTC_Data[RTC_YEAR]&0x0F)==0){
+		RTC_Data[RTC_YEAR] -= 0x7;
+		digits[3]--;
+		digits[4] = 9;
+	}else{
+		RTC_Data[RTC_YEAR]--;
+		digits[4]--;
+	}
+}
+
+void EventMonthRight(void){
+	if(RTC_Data[RTC_MONTH]==0x12){
+		RTC_Data[RTC_MONTH] = 0;
+		digits[0] = 0;
+		digits[1] = 0;
+	}else if((RTC_Data[RTC_MONTH]&0x0F)==9){
+		RTC_Data[RTC_MONTH] += 0x7;
+		digits[0]++;
+		digits[1] = 0;
+	}else{
+		RTC_Data[RTC_MONTH]++;
+		digits[1]++;
+	}
+}
+
+void EventMonthLeft(void){
+	if(RTC_Data[RTC_MONTH]==0x00){
+		RTC_Data[RTC_MONTH] = 0x12;
+		digits[0] = 1;
+		digits[1] = 2;
+	}else if((RTC_Data[RTC_MONTH]&0x0F)==0){
+		RTC_Data[RTC_MONTH] -= 0x7;
+		digits[0]--;
+		digits[1] = 9;
+	}else{
+		RTC_Data[RTC_MONTH]--;
+		digits[1]--;
+	}
+}
+
+void EventDateRight(void){
+	if(RTC_Data[RTC_DATE]==0x31){
+		RTC_Data[RTC_DATE] = 0;
+		digits[3] = 0;
+		digits[4] = 0;
+	}else if((RTC_Data[RTC_DATE]&0x0F)==9){
+		RTC_Data[RTC_DATE] += 0x7;
+		digits[3]++;
+		digits[4] = 0;
+	}else{
+		RTC_Data[RTC_DATE]++;
+		digits[4]++;
+	}
+}
+
+void EventDateLeft(void){
+	if(RTC_Data[RTC_DATE]==0x00){
+		RTC_Data[RTC_DATE] = 0x31;
+		digits[3] = 3;
+		digits[4] = 1;
+	}else if((RTC_Data[RTC_DATE]&0x0F)==0){
+		RTC_Data[RTC_DATE] -= 0x7;
+		digits[3]--;
+		digits[4] = 9;
+	}else{
+		RTC_Data[RTC_DATE]--;
+		digits[4]--;
+	}
+}
+
+void displayDate(void){
+	digits[0] = (RTC_Data[RTC_MONTH]&0xF0)>>4;
+	digits[1] = (RTC_Data[RTC_MONTH]&0x0F);
+	digits[2] = D_DASH;
+	digits[3] = (RTC_Data[RTC_DATE]&0xF0)>>4;
+	digits[4] = (RTC_Data[RTC_DATE]&0x0F);
 }

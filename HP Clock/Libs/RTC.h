@@ -13,7 +13,7 @@
 #define SLA_R 0b11010001
 
 //Seconds, Minutes, Hour, Day, Date, Month, Year
-uint8_t RTC_Data[7];
+volatile uint8_t RTC_Data[7];
 
 #define RTC_SEC   0
 #define RTC_MIN   1
@@ -23,11 +23,16 @@ uint8_t RTC_Data[7];
 #define RTC_MONTH 5
 #define RTC_YEAR  6
 
-void RTC_init();
+//Setup I/O
+void RTC_init(void);
+//Get [num]*2 bytes of time data starting from seconds
 uint8_t RTC_getData(uint8_t num);
-uint8_t RTC_setData();
+//Write the contents of RTC_Data to the RTC
+uint8_t RTC_setData(void);
+//Display an error message
 void RTC_error(uint8_t n);
-void RTC_writeTime();
+//Display TIME
+void RTC_writeTime(void);
 
 
 #endif /* RTC_H_ */

@@ -9,7 +9,7 @@
 #include "RTC.h"
 #include "control.h"
 
-void RTC_init(){
+void RTC_init(void){
 	//Set I2C clock frequency to 400kHz
 	TWBR = 2;
 }
@@ -91,7 +91,7 @@ uint8_t RTC_getData(uint8_t num){
 	return 0;
 }
 
-uint8_t RTC_setData(){
+uint8_t RTC_setData(void){
 	//Send start condition
 	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
 	//Wait for start condition to be sent
@@ -146,7 +146,7 @@ void RTC_error(uint8_t n){
 	digits[4] = n;
 }
 
-void RTC_writeTime(){
+void RTC_writeTime(void){
 	digits[0] = (RTC_Data[RTC_MIN]&0xF0)>>4;
 	digits[1] = (RTC_Data[RTC_MIN]&0x0F);
 	digits[2] = D_DASH;

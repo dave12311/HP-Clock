@@ -4,13 +4,11 @@
  * Created: 6/17/2019 7:55:43 PM
  *  Author: Dave
  */
-
-#include <stdint.h>
-
-#include "bitop.h"
-
 #ifndef CONTROL_H_
 #define CONTROL_H_
+
+#include <avr/io.h>
+#include "bitop.h"
 
 //Shift register definitions
 #define SH_DDR DDRC
@@ -41,11 +39,16 @@
 #define BLINK_MODE_LEFT     2
 #define BLINK_MODE_MIDDLE   3
 
+#define DISPLAY_MODE_TIME   0
+#define DISPLAY_MODE_DATE   1
+#define DISPLAY_MODE_YEAR   2
+
 //Display data
 const uint8_t Digit_data[DIGIT_NUM];
 
 //Buffer for all 5 displayed digits
 volatile uint8_t digits[5];
+volatile uint8_t decimalPoints;
 
 //Track which digit to load into shift register
 volatile uint8_t digitCounter;
@@ -54,11 +57,16 @@ volatile uint8_t digitCounter;
 volatile uint8_t blink;
 volatile uint8_t blinkMode;
 
+//Stores current display mode
+volatile uint8_t displayMode;
+
 //Store encoder states
 volatile uint8_t enc_a, enc_b;
-volatile uint8_t enc_a_old, enc_b_old;
+volatile uint8_t enc_b_old;
 volatile uint8_t enc_button, enc_button_old;
 volatile uint8_t encButtonPressed;
+
+volatile uint16_t resetTimer;
 
 //Encoder event pointers
 void (*volatile encoderEventRight)(void);
@@ -90,6 +98,10 @@ void EventMinRight(void);
 
 void EventMinLeft(void);
 
+void EventModeRight(void);
+
+void EventModeLeft(void);
+
 //Start timers, set I/O
 void control_init(void);
 
@@ -112,6 +124,9 @@ void startSetup(void);
 void displayTime(void);
 
 void displayDate(void);
+
+void displayYear(void);
+
 
 void blinkOn(void);
 

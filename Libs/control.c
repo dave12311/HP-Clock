@@ -11,10 +11,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+#include <stdint.h>
 
-#include "control.h"
 #include "bitop.h"
 #include "RTC.h"
+#include "control.h"
 
 //Display data
 const uint8_t Digit_data[DIGIT_NUM] = {
@@ -82,15 +83,27 @@ ISR(TIMER0_OVF_vect) {
     //Check button state
     if (!enc_button && enc_button_old) {
         encButtonPressed = 1;
+        resetTimer = 0;
     }
 
-    enc_a_old = enc_a;
+    if (!enc_button) {
+        resetTimer++;
+    }
+
+    if (resetTimer == 2000) {
+        resetTimer = 0;
+        cli();
+        control_init();
+        startSetup();
+    }
+
     enc_b_old = enc_b;
     enc_button_old = enc_button;
 
 }
 
 ISR(TIMER1_OVF_vect) {
+    //TODO: Fix blinking to have a T of 1s
     if (blink == 0) {
         blink = 1;
     } else {
@@ -105,13 +118,13 @@ void control_init(void) {
     digitCounter = 0;
     enc_a = 1;
     enc_b = 1;
-    enc_a_old = 1;
     enc_b_old = 1;
     enc_button = 1;
-    enc_button_old = 1;
+    enc_button_old = 0;
     encButtonPressed = 0;
     encoderEventRight = 0;
     encoderEventLeft = 0;
+    decimalPoints = 0;
 
     //Set shift register pins as outputs
     setBit(SH_DDR, SH_DATA);
@@ -147,7 +160,11 @@ void sh_pulseST(void) {
 
 void sh_shiftDigit(uint8_t d) {
     for (uint8_t i = 0; i < 8; i++) {
-        changeBit(SH_PORT, SH_DATA, (Digit_data[d] & (1 << i)) >> i);
+        if (i == 0) {
+            changeBit(SH_PORT, SH_DATA, (decimalPoints & (1 << digitCounter)) >> digitCounter);
+        } else {
+            changeBit(SH_PORT, SH_DATA, (Digit_data[d] & (1 << i)) >> i);
+        }
         sh_pulseSH();
     }
     sh_pulseST();
@@ -198,7 +215,7 @@ void startSetup(void) {
     RTC_Data[RTC_MONTH] = 0;
     digits[0] = 0;
     digits[1] = 0;
-    digits[2] = D_DASH;
+    digits[2] = D_EMPTY;
     digits[3] = 0;
     digits[4] = 0;
     encoderEventRight = &EventMonthRight;
@@ -233,9 +250,12 @@ void startSetup(void) {
     while (!encButtonPressed);
     encButtonPressed = 0;
 
+    displayMode = DISPLAY_MODE_TIME;
     blinkMode = BLINK_MODE_MIDDLE;
-    encoderEventRight = 0;
-    encoderEventLeft = 0;
+    RTC_Data[RTC_DAY] = 0;
+    RTC_Data[RTC_SEC] = 0;
+    encoderEventRight = EventModeRight;
+    encoderEventLeft = EventModeLeft;
 }
 
 void EventYearRight(void) {
@@ -398,12 +418,45 @@ void displayTime(void) {
 }
 
 void displayDate(void) {
-    digits[0] = (RTC_Data[RTC_MONTH] & 0xF0) >> 4;
-    digits[1] = (RTC_Data[RTC_MONTH] & 0x0F);
-    digits[2] = D_DASH;
+    digits[0] = D_EMPTY;
+    digits[1] = (RTC_Data[RTC_MONTH] & 0xF0) >> 4;
+    digits[2] = (RTC_Data[RTC_MONTH] & 0x0F);
     digits[3] = (RTC_Data[RTC_DATE] & 0xF0) >> 4;
     digits[4] = (RTC_Data[RTC_DATE] & 0x0F);
 }
 
+void displayYear(void) {
+    digits[0] = D_EMPTY;
+    digits[1] = 2;
+    digits[2] = 0;
+    digits[3] = (RTC_Data[RTC_YEAR] & 0xF0) >> 4;
+    digits[4] = (RTC_Data[RTC_YEAR] & 0x0F);
+}
 
+void EventModeRight(void) {
+    if (displayMode == DISPLAY_MODE_TIME) {
+        displayMode = DISPLAY_MODE_DATE;
+        decimalPoints = 0x4;
+        blinkOff();
+    } else if (displayMode == DISPLAY_MODE_DATE) {
+        displayMode = DISPLAY_MODE_YEAR;
+        decimalPoints = 0x0;
+    } else if (displayMode == DISPLAY_MODE_YEAR) {
+        displayMode = DISPLAY_MODE_TIME;
+        blinkOn();
+    }
+}
 
+void EventModeLeft(void) {
+    if (displayMode == DISPLAY_MODE_TIME) {
+        displayMode = DISPLAY_MODE_YEAR;
+        blinkOff();
+    } else if (displayMode == DISPLAY_MODE_YEAR) {
+        displayMode = DISPLAY_MODE_DATE;
+        decimalPoints = 0x4;
+    } else if (displayMode == DISPLAY_MODE_DATE) {
+        displayMode = DISPLAY_MODE_TIME;
+        decimalPoints = 0x0;
+        blinkOn();
+    }
+}

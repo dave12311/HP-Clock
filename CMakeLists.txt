@@ -17,7 +17,7 @@ SET(FILES
         Libs/RTC.c
         Libs/control.h
         Libs/control.c
-)
+        Libs/DHT11.c Libs/DHT11.h)
 
 SET(FLASH NO CACHE BOOL "Flash")
 #============================================================================================

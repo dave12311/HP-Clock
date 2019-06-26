@@ -8,13 +8,16 @@
 #define __AVR_ATmega328P__
 #endif
 
-#include <avr/io.h>
+#ifndef F_CPU
+#define F_CPU 16000000UL
+#endif
+
 #include <util/delay.h>
 #include <stdint.h>
 
-#include "Libs/bitop.h"
 #include "Libs/control.h"
 #include "Libs/RTC.h"
+#include "Libs/DHT11.h"
 
 int main(void) {
     control_init();
@@ -25,13 +28,26 @@ int main(void) {
     startSetup();
     RTC_setData();
 
+    uint8_t count = 0;
+
     while (1) {
-        err = RTC_getData(2);
+        if (count == 255) {
+            err = RTC_getData(7);
+        }
+
         if (err == 0) {
-            displayTime();
+            if (displayMode == DISPLAY_MODE_TIME) {
+                displayTime();
+            } else if (displayMode == DISPLAY_MODE_DATE) {
+                displayDate();
+            } else if (displayMode == DISPLAY_MODE_YEAR) {
+                displayYear();
+            }
         } else {
             RTC_error(err);
+            _delay_ms(10000);
         }
-        _delay_ms(500);
+        _delay_ms(10);
+        count++;
     }
 }

@@ -8,13 +8,14 @@
 #define __AVR_ATmega328P__
 #endif
 
+#include <stdint.h>
 #include <util/twi.h>
 
-#include "RTC.h"
 #include "control.h"
+#include "RTC.h"
 
 void RTC_init(void) {
-    //Set I2C clock frequency to 400kHz
+    //Set I2C clock frequency divider
     TWBR = 6;
 }
 

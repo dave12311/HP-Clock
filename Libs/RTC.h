@@ -4,10 +4,10 @@
  * Created: 6/19/2019 11:08:14 PM
  *  Author: Dave
  */
-#include <stdint.h>
-
 #ifndef RTC_H_
 #define RTC_H_
+
+#include <stdint.h>
 
 #define SLA_W 0b11010000
 #define SLA_R 0b11010001

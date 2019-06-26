@@ -17,7 +17,6 @@
 
 #include "Libs/control.h"
 #include "Libs/RTC.h"
-#include "Libs/DHT11.h"
 
 int main(void) {
     control_init();
